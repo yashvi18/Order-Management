@@ -94,8 +94,13 @@ public class PaymentService {
                     return;
                 }
                 try {
-                    gateway.refund(transactionId, amount);
-                    log.warn("Voided charge {} for {} after checkout rollback", transactionId, amount);
+                    GatewayResult result = gateway.refund(transactionId, amount);
+                    if (result.success()) {
+                        log.warn("Voided charge {} for {} after checkout rollback", transactionId, amount);
+                    } else {
+                        log.error("Failed to void charge {} for {} after checkout rollback (manual reconciliation "
+                                + "needed): {}", transactionId, amount, result.failureReason());
+                    }
                 } catch (Exception e) {
                     log.error("Failed to void charge {} for {} after checkout rollback", transactionId, amount, e);
                 }

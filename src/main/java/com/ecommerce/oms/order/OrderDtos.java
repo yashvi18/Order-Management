@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 
 public final class OrderDtos {
 
@@ -22,6 +23,11 @@ public final class OrderDtos {
             @NotBlank @Size(max = 100) String state,
             @NotBlank @Pattern(regexp = "[A-Za-z0-9 -]{3,12}") String postalCode,
             @NotBlank @Pattern(regexp = "[A-Z]{2}", message = "must be a 2-letter ISO country code") String country) {
+
+        public AddressDto {
+            // Normalised before bean validation runs, so "in" is accepted as "IN".
+            country = country == null ? null : country.trim().toUpperCase(Locale.ROOT);
+        }
 
         public Address toAddress() {
             return new Address(line1, line2, city, state, postalCode, country);

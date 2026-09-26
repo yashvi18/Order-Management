@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -12,7 +13,10 @@ import com.ecommerce.oms.common.ConflictException;
 import com.ecommerce.oms.support.IntegrationTestBase;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class PaymentServiceTest extends IntegrationTestBase {
@@ -66,6 +70,18 @@ class PaymentServiceTest extends IntegrationTestBase {
         });
         assertThat(paymentService.findSummary(1L)).isEmpty();
         verify(gateway).refund(anyString(), eq(new BigDecimal("100.00")));
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void failedVoidIsLoggedAsErrorNotAsVoided(CapturedOutput output) {
+        doReturn(GatewayResult.declined("PSP unavailable")).when(gateway).refund(anyString(), any());
+        tx.executeWithoutResult(s -> {
+            paymentService.capture(1L, new BigDecimal("100.00"), "tok_visa");
+            s.setRollbackOnly();
+        });
+        assertThat(output).contains("ERROR").contains("Failed to void charge").contains("PSP unavailable")
+                .doesNotContain("Voided charge");
     }
 
     @Test

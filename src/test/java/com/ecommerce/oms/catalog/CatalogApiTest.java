@@ -4,6 +4,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -114,5 +115,20 @@ class CatalogApiTest extends IntegrationTestBase {
         mvc.perform(delete("/api/admin/products/" + phone.getId()).with(as(admin)))
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/catalog/products/" + phone.getId())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void categoryParentCycleIsRejected() throws Exception {
+        long a = idFrom(mvc.perform(post("/api/admin/categories").with(as(admin)).contentType(APPLICATION_JSON)
+                        .content("{\"name\":\"A\",\"taxRate\":0.1}"))
+                .andExpect(status().isCreated()).andReturn());
+        long b = idFrom(mvc.perform(post("/api/admin/categories").with(as(admin)).contentType(APPLICATION_JSON)
+                        .content("{\"name\":\"B\",\"taxRate\":0.1,\"parentId\":%d}".formatted(a)))
+                .andExpect(status().isCreated()).andReturn());
+
+        mvc.perform(put("/api/admin/categories/" + a).with(as(admin)).contentType(APPLICATION_JSON)
+                        .content("{\"name\":\"A\",\"taxRate\":0.1,\"parentId\":%d}".formatted(b)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Category hierarchy cannot contain cycles"));
     }
 }

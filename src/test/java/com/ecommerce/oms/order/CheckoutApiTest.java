@@ -79,6 +79,15 @@ class CheckoutApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void lowercaseCountryCodeIsNormalised() throws Exception {
+        fixtures.cartWith(alice, laptop, 1);
+        mvc.perform(post("/api/checkout").with(as(alice)).contentType(APPLICATION_JSON)
+                        .content(checkoutJson(null, "tok_visa").replace("\"country\":\"IN\"", "\"country\":\"in\"")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.shippingAddress.country").value("IN"));
+    }
+
+    @Test
     void emptyCartIsBadRequest() throws Exception {
         mvc.perform(post("/api/checkout").with(as(alice)).contentType(APPLICATION_JSON).content(CHECKOUT_JSON))
                 .andExpect(status().isBadRequest())

@@ -95,7 +95,9 @@ treated as zero.
 **Returns & refunds.** Item-level partial returns within 30 days of delivery. Staff receive (restock and
 refund) or reject. The per-unit refund is the line's paid total (after discount, including tax). The last
 unit gets the remainder, so refunds always sum to exactly what was paid. Cancelling (only before packing)
-releases reservations and refunds in full. Receiving or rejecting a return locks the return row before
+releases reservations and refunds in full. Cancel and warehouse status updates lock the order row before
+checking its status, so the router or a staff "packed" cannot move an order on while its refund is being
+issued (`CancelConcurrencyTest`). Receiving or rejecting a return locks the return row before
 checking its status, so two staff clicking "receive" at once can't refund twice — covered by a concurrency
 test (`ReturnsConcurrencyTest`).
 
@@ -103,8 +105,8 @@ test (`ReturnsConcurrencyTest`).
 1. One currency. Money is `BigDecimal`, 2 decimals, HALF_UP.
 2. Payment is captured at checkout through a simulated gateway (`PaymentGateway` port). If the checkout
    transaction rolls back after a successful charge, a transaction-synchronization hook automatically voids
-   (refunds) the charge, so money is never taken without a placed order. A production PSP would use
-   authorize-then-capture instead.
+   (refunds) the charge; a failed void is logged at ERROR for manual reconciliation. A production PSP would
+   use authorize-then-capture instead.
 3. Reservation happens at checkout. Stock is only decremented from `onHand` when the order ships.
 4. Order status is tracked per order, not per shipment. A staff user may advance an order if any of its
    lines ships from their warehouse.
@@ -133,13 +135,16 @@ test (`ReturnsConcurrencyTest`).
   is truncated before each test. Covers catalog, inventory, cart, checkout (happy path, empty cart, no stock,
   declined card, exhausted discount, idempotency, warehouse split), async pipeline and retries, tracking and
   cancellation, warehouse fulfillment and its scoping, returns and refund rounding, seeding, and OpenAPI.
-- **Concurrency:** three multi-threaded tests prove there is no unsafe interleaving: the checkout oversell
+- **Concurrency:** six multi-threaded tests prove there is no unsafe interleaving: the checkout oversell
   test (`CheckoutConcurrencyTest.concurrentBuyersNeverOversellAcrossWarehouses`, 12 buyers over two
   warehouses, exactly 5 orders placed), the same-customer double submit
   (`CheckoutConcurrencyTest.sameCustomerDoubleSubmitCreatesOneOrder`), and the concurrent double-receive of a
-  return (`ReturnsConcurrencyTest.concurrentReceivesRefundExactlyOnce`, refunds exactly once).
+  return (`ReturnsConcurrencyTest.concurrentReceivesRefundExactlyOnce`, refunds exactly once), cancel racing a
+  staff "packed" and cancel racing the fulfillment router (`CancelConcurrencyTest`, the order is either
+  cancelled and refunded or moves on with no refund, never both), and two concurrent "shipped" updates
+  (`FulfillmentConcurrencyTest.concurrentShipUpdatesCommitStockOnce`, stock committed once, loser gets 409).
 - **Background:** one Awaitility test runs the real scheduler end to end.
-- 118 tests in the suite as of this build (`./mvnw clean verify`, `BUILD SUCCESS`).
+- 128 tests in the suite as of this build (`./mvnw clean verify`, `BUILD SUCCESS`).
 
 ## AI workflow
 Built with Claude Code and the "superpowers" skills (in `docs/ai/skills/`). The assignment PDF was turned

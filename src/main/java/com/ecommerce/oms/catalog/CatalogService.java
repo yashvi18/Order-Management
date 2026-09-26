@@ -51,6 +51,13 @@ public class CatalogService {
         if (id.equals(request.parentId())) {
             throw new BadRequestException("A category cannot be its own parent");
         }
+        // Walk up from the requested parent: reaching this category means the move would create a loop.
+        Category ancestor = request.parentId() == null ? null : requireCategory(request.parentId());
+        for (; ancestor != null; ancestor = ancestor.getParent()) {
+            if (ancestor.getId().equals(id)) {
+                throw new BadRequestException("Category hierarchy cannot contain cycles");
+            }
+        }
         apply(category, request);
         return CategoryResponse.from(category);
     }
