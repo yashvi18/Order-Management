@@ -1,0 +1,5 @@
+package com.ecommerce.oms.events;
+
+public enum OrderEventType {
+    ORDER_PLACED, ORDER_STATUS_CHANGED, ORDER_CANCELLED, RETURN_REQUESTED, RETURN_REJECTED, REFUND_ISSUED
+}
