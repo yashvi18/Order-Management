@@ -1,9 +1,14 @@
 package com.ecommerce.oms.support;
 
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ecommerce.oms.auth.User;
+import com.ecommerce.oms.order.OrderDtos.AddressDto;
+import com.ecommerce.oms.order.OrderDtos.CheckoutRequest;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,5 +47,21 @@ public abstract class IntegrationTestBase {
     protected static long idFrom(MvcResult result) throws Exception {
         Number id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
         return id.longValue();
+    }
+
+    protected static final String CHECKOUT_JSON = """
+            {"shippingAddress":{"line1":"12 MG Road","city":"Bengaluru","state":"KA","postalCode":"560001","country":"IN"},
+             "paymentToken":"tok_visa"}
+            """;
+
+    protected static CheckoutRequest checkoutRequest() {
+        return new CheckoutRequest(new AddressDto("12 MG Road", null, "Bengaluru", "KA", "560001", "IN"),
+                "tok_visa", null);
+    }
+
+    protected long checkout(User customer) throws Exception {
+        return idFrom(mvc.perform(post("/api/checkout").with(as(customer)).contentType(APPLICATION_JSON)
+                        .content(CHECKOUT_JSON))
+                .andExpect(status().isCreated()).andReturn());
     }
 }
