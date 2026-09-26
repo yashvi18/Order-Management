@@ -1,0 +1,63 @@
+### Demo flow — start the app with ./mvnw spring-boot:run (seeds demo data)
+@base = http://localhost:8080
+@customer = alice@example.com:Customer@123
+@admin = admin@oms.local:Admin@123
+@staff = staff.blr@oms.local:Staff@123
+
+### 1. Browse the catalog (public)
+GET {{base}}/api/catalog/products?q=phone&sort=price,asc
+
+### 2. Check availability (public)
+GET {{base}}/api/catalog/products/1/availability
+
+### 3. Add to cart
+POST {{base}}/api/cart/items
+Authorization: Basic {{customer}}
+Content-Type: application/json
+
+{"productId": 3, "quantity": 2}
+
+### 4. Checkout with a discount (idempotent)
+POST {{base}}/api/checkout
+Authorization: Basic {{customer}}
+Idempotency-Key: demo-checkout-1
+Content-Type: application/json
+
+{"shippingAddress":{"line1":"12 MG Road","city":"Bengaluru","state":"KA","postalCode":"560001","country":"IN"},
+ "paymentToken":"tok_visa","discountCode":"WELCOME10"}
+
+### 5. Track the order (CONFIRMED once the background router has run, ~0.5s)
+GET {{base}}/api/orders/1
+Authorization: Basic {{customer}}
+
+### 6. Warehouse queue and fulfillment
+GET {{base}}/api/warehouse/orders?status=CONFIRMED
+Authorization: Basic {{staff}}
+
+###
+PATCH {{base}}/api/warehouse/orders/1/status
+Authorization: Basic {{staff}}
+Content-Type: application/json
+
+{"status":"PACKED"}
+
+### (repeat with SHIPPED, then DELIVERED)
+
+### 7. Return one unit
+POST {{base}}/api/orders/1/returns
+Authorization: Basic {{customer}}
+Content-Type: application/json
+
+{"reason":"Did not fit","items":[{"orderItemId":1,"quantity":1}]}
+
+### 8. Staff receives the return (restock + refund)
+POST {{base}}/api/warehouse/returns/1/receive
+Authorization: Basic {{staff}}
+
+### 9. Notifications and audit trail
+GET {{base}}/api/notifications
+Authorization: Basic {{customer}}
+
+###
+GET {{base}}/api/admin/audit-logs?orderId=1
+Authorization: Basic {{admin}}
