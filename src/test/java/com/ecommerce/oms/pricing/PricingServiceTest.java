@@ -66,4 +66,25 @@ class PricingServiceTest {
         BigDecimal sum = result.lines().stream().map(PricedLine::total).reduce(BigDecimal.ZERO, BigDecimal::add);
         assertThat(result.grandTotal()).isEqualByComparingTo(sum);
     }
+
+    @Test
+    void equalLinesWithTinyDiscountNeverOverAllocate() {
+        PricingResult result = pricing.price(List.of(
+                line(1, "10.00", 1, "0"), line(2, "10.00", 1, "0"), line(3, "10.00", 1, "0"), line(4, "10.00", 1, "0")),
+                new BigDecimal("0.02"));
+        assertThat(result.discountTotal()).isEqualByComparingTo("0.02");
+        BigDecimal lineDiscountSum = result.lines().stream().map(PricedLine::discount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(lineDiscountSum).isEqualByComparingTo("0.02");
+        for (PricedLine line : result.lines()) {
+            assertThat(line.discount()).isGreaterThanOrEqualTo(BigDecimal.ZERO);
+            assertThat(line.discount()).isLessThanOrEqualTo(line.subtotal());
+        }
+    }
+
+    @Test
+    void negativeDiscountIsTreatedAsZero() {
+        PricingResult result = pricing.price(List.of(line(1, "20.00", 1, "0")), new BigDecimal("-5.00"));
+        assertThat(result.discountTotal()).isEqualByComparingTo("0.00");
+        assertThat(result.grandTotal()).isEqualByComparingTo("20.00");
+    }
 }
