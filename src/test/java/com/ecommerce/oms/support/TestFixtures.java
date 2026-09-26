@@ -7,6 +7,10 @@ import com.ecommerce.oms.catalog.Category;
 import com.ecommerce.oms.catalog.CategoryRepository;
 import com.ecommerce.oms.catalog.Product;
 import com.ecommerce.oms.catalog.ProductRepository;
+import com.ecommerce.oms.inventory.InventoryItem;
+import com.ecommerce.oms.inventory.InventoryItemRepository;
+import com.ecommerce.oms.inventory.Warehouse;
+import com.ecommerce.oms.inventory.WarehouseRepository;
 import java.math.BigDecimal;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +25,8 @@ public class TestFixtures {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private ProductRepository productRepository;
+    @Autowired private WarehouseRepository warehouseRepository;
+    @Autowired private InventoryItemRepository inventoryItemRepository;
 
     public User customer(String email) {
         return user(email, Role.CUSTOMER, null);
@@ -62,5 +68,35 @@ public class TestFixtures {
     public Product deactivate(Product product) {
         product.setActive(false);
         return productRepository.save(product);
+    }
+
+    public Warehouse warehouse(String code) {
+        Warehouse warehouse = new Warehouse();
+        warehouse.setCode(code);
+        warehouse.setName("Warehouse " + code);
+        warehouse.setCity("City " + code);
+        return warehouseRepository.save(warehouse);
+    }
+
+    public Warehouse deactivate(Warehouse warehouse) {
+        warehouse.setActive(false);
+        return warehouseRepository.save(warehouse);
+    }
+
+    public InventoryItem stock(Product product, Warehouse warehouse, int onHand, int reserved) {
+        InventoryItem item = new InventoryItem();
+        item.setProduct(product);
+        item.setWarehouse(warehouse);
+        item.setOnHand(onHand);
+        item.setReserved(reserved);
+        return inventoryItemRepository.save(item);
+    }
+
+    public InventoryItem inventory(Product product, Warehouse warehouse) {
+        return inventoryItemRepository.findByProductIdAndWarehouseId(product.getId(), warehouse.getId()).orElseThrow();
+    }
+
+    public User staff(String email, Warehouse warehouse) {
+        return user(email, Role.WAREHOUSE_STAFF, warehouse.getId());
     }
 }
