@@ -2,16 +2,23 @@ package com.ecommerce.oms.payment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.ecommerce.oms.common.ConflictException;
 import com.ecommerce.oms.support.IntegrationTestBase;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class PaymentServiceTest extends IntegrationTestBase {
 
     @Autowired private PaymentService paymentService;
+    @MockitoSpyBean private PaymentGateway gateway;
 
     @Test
     void captureStoresAnApprovedPayment() {
@@ -49,5 +56,21 @@ class PaymentServiceTest extends IntegrationTestBase {
         assertThatThrownBy(() -> tx.executeWithoutResult(
                 s -> paymentService.refund(1L, new BigDecimal("40.01"), "too much")))
                 .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void voidsChargeWhenTransactionRollsBackAfterCapture() {
+        tx.executeWithoutResult(s -> {
+            paymentService.capture(1L, new BigDecimal("100.00"), "tok_visa");
+            s.setRollbackOnly();
+        });
+        assertThat(paymentService.findSummary(1L)).isEmpty();
+        verify(gateway).refund(anyString(), eq(new BigDecimal("100.00")));
+    }
+
+    @Test
+    void committedCaptureNeverRefunds() {
+        tx.executeWithoutResult(s -> paymentService.capture(1L, new BigDecimal("100.00"), "tok_visa"));
+        verify(gateway, never()).refund(any(), any());
     }
 }
