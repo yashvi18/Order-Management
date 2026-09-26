@@ -6,6 +6,7 @@ import com.ecommerce.oms.common.BadRequestException;
 import com.ecommerce.oms.common.ForbiddenException;
 import com.ecommerce.oms.common.NotFoundException;
 import com.ecommerce.oms.common.PageResponse;
+import com.ecommerce.oms.common.Pageables;
 import com.ecommerce.oms.events.OrderEventPublisher;
 import com.ecommerce.oms.events.OrderEventType;
 import com.ecommerce.oms.inventory.InventoryService;
@@ -14,6 +15,7 @@ import com.ecommerce.oms.order.OrderDtos.OrderResponse;
 import com.ecommerce.oms.order.OrderDtos.OrderSummaryResponse;
 import com.ecommerce.oms.order.OrderMapper;
 import com.ecommerce.oms.order.OrderRepository;
+import com.ecommerce.oms.order.OrderService;
 import com.ecommerce.oms.order.OrderStatus;
 import java.util.EnumSet;
 import java.util.Set;
@@ -44,6 +46,7 @@ public class FulfillmentService {
 
     @Transactional(readOnly = true)
     public PageResponse<OrderSummaryResponse> queue(AppUserDetails actor, OrderStatus status, Pageable pageable) {
+        Pageables.requireSortableBy(pageable, OrderService.SORTABLE);
         if (actor.role() == Role.ADMIN) {
             return PageResponse.from(orderRepository.findByStatus(status, pageable).map(orderMapper::toSummary));
         }

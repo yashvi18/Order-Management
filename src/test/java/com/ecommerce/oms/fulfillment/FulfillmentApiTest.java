@@ -104,6 +104,15 @@ class FulfillmentApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void warehouseQueueRejectsUnknownSort() throws Exception {
+        mvc.perform(get("/api/warehouse/orders").param("sort", "nope").with(as(staffW1)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Cannot sort by 'nope'; allowed: grandTotal, id, placedAt, status"));
+        mvc.perform(get("/api/warehouse/orders").param("sort", "placedAt,desc").with(as(staffW1)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void advanceToDeliveredHelperWorks() throws Exception {
         fixtures.cartWith(alice, laptop, 1);
         long orderId = checkout(alice);

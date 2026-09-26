@@ -58,4 +58,14 @@ class OutboxProcessorTest extends IntegrationTestBase {
         assertThat(processor.processBatch()).isZero();
         assertThat(notificationRepository.count()).isEqualTo(1);
     }
+
+    @Test
+    void notificationsRejectUnknownSort() throws Exception {
+        User alice = fixtures.customer("alice@test.local");
+        mvc.perform(get("/api/notifications").param("sort", "nope").with(as(alice)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Cannot sort by 'nope'; allowed: createdAt, id"));
+        mvc.perform(get("/api/notifications").param("sort", "createdAt,desc").with(as(alice)))
+                .andExpect(status().isOk());
+    }
 }

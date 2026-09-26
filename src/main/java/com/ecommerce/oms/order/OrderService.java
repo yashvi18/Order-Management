@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OrderService {
 
-    static final Set<String> SORTABLE = Set.of("id", "placedAt", "grandTotal", "status");
+    public static final Set<String> SORTABLE = Set.of("id", "placedAt", "grandTotal", "status");
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
