@@ -6,9 +6,13 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ecommerce.oms.auth.AppUserDetails;
 import com.ecommerce.oms.auth.User;
+import com.ecommerce.oms.events.OutboxProcessor;
+import com.ecommerce.oms.fulfillment.FulfillmentService;
 import com.ecommerce.oms.order.OrderDtos.AddressDto;
 import com.ecommerce.oms.order.OrderDtos.CheckoutRequest;
+import com.ecommerce.oms.order.OrderStatus;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +35,8 @@ public abstract class IntegrationTestBase {
     @Autowired protected TestFixtures fixtures;
     @Autowired protected TransactionTemplate tx;
     @Autowired private DatabaseCleaner databaseCleaner;
+    @Autowired protected OutboxProcessor outboxProcessor;
+    @Autowired protected FulfillmentService fulfillmentService;
 
     protected MockMvc mvc;
 
@@ -63,5 +69,13 @@ public abstract class IntegrationTestBase {
         return idFrom(mvc.perform(post("/api/checkout").with(as(customer)).contentType(APPLICATION_JSON)
                         .content(CHECKOUT_JSON))
                 .andExpect(status().isCreated()).andReturn());
+    }
+
+    protected void advanceToDelivered(long orderId) {
+        outboxProcessor.processBatch();
+        AppUserDetails admin = AppUserDetails.from(fixtures.admin());
+        for (OrderStatus status : new OrderStatus[] {OrderStatus.PACKED, OrderStatus.SHIPPED, OrderStatus.DELIVERED}) {
+            fulfillmentService.updateStatus(orderId, status, admin, null);
+        }
     }
 }
