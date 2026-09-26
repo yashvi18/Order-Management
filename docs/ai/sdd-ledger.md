@@ -88,3 +88,9 @@ Task 14: minor (deferred, IMPORTANT FOR FINAL REVIEW): OrderService.cancel check
 Task 14: complete (commits 55c2587..22124fb, review clean) — pushed
 Task 15: minor (deferred): DataSeederTest doesn't assert staff warehouse linkage / alice login (plan-mandated).
 Task 15: complete (commits 22124fb..f9c59bd, review clean; springdoc 3.1.1 works with Boot 4.1.1) — pushed
+Task 16: complete (commits f9c59bd..67a946d, review clean) — pushed
+Final review (36fc41c..67a946d, opus): With fixes — C1 cancel races router/staff → refund at PSP while order ships (reproduced); I1 concurrent fulfillment updates → 500; I2 unwhitelisted sort on warehouse queue + notifications → 500; minors M1-M6. Deferred triage: all OK TO SHIP except T3 IllegalStateException→500 and T12 cross-customer cancel test (both folded into C1/I1).
+Ruling: final fix wave = C1, I1, I2, M1 (401/403 ProblemDetail), M2 (category parent cycle), M4 (README void wording + check refund result), M5 (uppercase country before validation); M3 (Clock in CustomerOrder) and M6 (LIKE wildcard escaping) left as documented minors — low value, touch core entity/query — cost if wrong: cosmetic.
+Final fix wave: 4 commits 67a946d..09e07b7 (C1, I1, I2, M1, M2, M4, M5, README); scoped re-review (opus): all findings addressed, no new breakage; 128 tests green.
+Final: minor (deferred): cancel holds the order lock during the gateway refund (slow PSP → lock timeouts for waiting router/staff); lock taken before ownership filter; router-race test only exercises the CANCELLED branch; M3 order timestamps use Instant.now() not Clock; M6 LIKE wildcards not escaped in product search.
+Branch complete: main pushed to origin through the final fix wave.
