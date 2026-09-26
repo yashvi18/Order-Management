@@ -4,10 +4,13 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ecommerce.oms.support.IntegrationTestBase;
+import org.springframework.http.MediaType;
 import org.junit.jupiter.api.Test;
 
 class AuthApiTest extends IntegrationTestBase {
@@ -52,7 +55,13 @@ class AuthApiTest extends IntegrationTestBase {
 
     @Test
     void meRequiresAuthentication() throws Exception {
-        mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("WWW-Authenticate", "Basic realm=\"oms\""))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.title").value("Unauthorized"))
+                .andExpect(jsonPath("$.detail").value("Authentication required"));
     }
 
     @Test
@@ -68,6 +77,19 @@ class AuthApiTest extends IntegrationTestBase {
     void wrongPasswordIsUnauthorized() throws Exception {
         fixtures.customer("alice@example.com");
         mvc.perform(get("/api/auth/me").with(httpBasic("alice@example.com", "wrong-password")))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
+    void wrongRoleIsForbiddenProblemDetail() throws Exception {
+        User alice = fixtures.customer("alice@example.com");
+        mvc.perform(get("/api/admin/users").with(as(alice)))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.title").value("Forbidden"))
+                .andExpect(jsonPath("$.detail").value("Access denied"));
     }
 }
