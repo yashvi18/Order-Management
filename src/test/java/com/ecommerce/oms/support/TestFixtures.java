@@ -3,6 +3,9 @@ package com.ecommerce.oms.support;
 import com.ecommerce.oms.auth.Role;
 import com.ecommerce.oms.auth.User;
 import com.ecommerce.oms.auth.UserRepository;
+import com.ecommerce.oms.cart.Cart;
+import com.ecommerce.oms.cart.CartItem;
+import com.ecommerce.oms.cart.CartRepository;
 import com.ecommerce.oms.catalog.Category;
 import com.ecommerce.oms.catalog.CategoryRepository;
 import com.ecommerce.oms.catalog.Product;
@@ -18,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** Builds persistent test data directly through repositories. Later tasks add more creators here. */
 public class TestFixtures {
@@ -31,6 +35,8 @@ public class TestFixtures {
     @Autowired private WarehouseRepository warehouseRepository;
     @Autowired private InventoryItemRepository inventoryItemRepository;
     @Autowired private DiscountRepository discountRepository;
+    @Autowired private CartRepository cartRepository;
+    @Autowired private TransactionTemplate transactionTemplate;
 
     public User customer(String email) {
         return user(email, Role.CUSTOMER, null);
@@ -111,5 +117,20 @@ public class TestFixtures {
         discount.setValue(new BigDecimal(value));
         discount.setUsageLimit(usageLimit);
         return discountRepository.save(discount);
+    }
+
+    public void cartWith(User customer, Product product, int quantity) {
+        transactionTemplate.executeWithoutResult(status -> {
+            Cart cart = cartRepository.findByCustomerId(customer.getId()).orElseGet(() -> {
+                Cart created = new Cart();
+                created.setCustomer(userRepository.getReferenceById(customer.getId()));
+                return cartRepository.save(created);
+            });
+            CartItem item = new CartItem();
+            item.setCart(cart);
+            item.setProduct(productRepository.getReferenceById(product.getId()));
+            item.setQuantity(quantity);
+            cart.getItems().add(item);
+        });
     }
 }
