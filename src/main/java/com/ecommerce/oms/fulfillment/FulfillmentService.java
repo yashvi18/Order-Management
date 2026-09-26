@@ -60,7 +60,9 @@ public class FulfillmentService {
             throw new BadRequestException("Warehouse updates may only set PACKED, SHIPPED or DELIVERED");
         }
         accessPolicy.check(orderId, actor);
-        CustomerOrder order = orderRepository.findById(orderId).orElseThrow(() -> new NotFoundException("Order not found"));
+        // Locked so two concurrent updates serialise and the loser fails the state check (409) instead of
+        // tripping over already-consumed stock.
+        CustomerOrder order = orderRepository.lockById(orderId).orElseThrow(() -> new NotFoundException("Order not found"));
         order.transitionTo(target, actor.email(), note);
         if (target == OrderStatus.SHIPPED) {
             inventoryService.commitShipment(order.stockAllocations());

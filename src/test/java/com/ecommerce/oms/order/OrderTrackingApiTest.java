@@ -94,6 +94,14 @@ class OrderTrackingApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void cancellingAnotherCustomersOrderIs404() throws Exception {
+        long aliceOrder = placeOrder(alice, 1);
+        mvc.perform(post("/api/orders/%d/cancel".formatted(aliceOrder)).with(as(bob)))
+                .andExpect(status().isNotFound());
+        assertThat(orderRepository.findById(aliceOrder).orElseThrow().getStatus()).isEqualTo(OrderStatus.PLACED);
+    }
+
+    @Test
     void routerDoesNotConfirmAnOrderCancelledFirst() throws Exception {
         long orderId = placeOrder(alice, 1);
         mvc.perform(post("/api/orders/%d/cancel".formatted(orderId)).with(as(alice))).andExpect(status().isOk());

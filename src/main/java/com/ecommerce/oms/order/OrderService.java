@@ -63,9 +63,10 @@ public class OrderService {
     /** Allowed only while PLACED/CONFIRMED (state machine): releases reserved stock and refunds in full. */
     @Transactional
     public OrderResponse cancel(Long orderId, AppUserDetails actor, String reason) {
-        CustomerOrder order = (actor.role() == Role.ADMIN
-                ? orderRepository.findById(orderId)
-                : orderRepository.findByIdAndCustomerId(orderId, actor.id()))
+        // Lock the row before the status check: the refund below is an external call that a rollback cannot undo,
+        // so the router or a warehouse update must not be able to move the order on while we cancel it.
+        CustomerOrder order = orderRepository.lockById(orderId)
+                .filter(o -> actor.role() == Role.ADMIN || o.getCustomer().getId().equals(actor.id()))
                 .orElseThrow(OrderService::notFound);
         order.transitionTo(OrderStatus.CANCELLED, actor.email(),
                 reason == null || reason.isBlank() ? "Cancelled" : reason);
