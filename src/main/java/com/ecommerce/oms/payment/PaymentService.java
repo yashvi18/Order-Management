@@ -1,0 +1,74 @@
+package com.ecommerce.oms.payment;
+
+import com.ecommerce.oms.common.ApiException;
+import com.ecommerce.oms.common.BadRequestException;
+import com.ecommerce.oms.common.ConflictException;
+import com.ecommerce.oms.common.Money;
+import com.ecommerce.oms.common.NotFoundException;
+import java.math.BigDecimal;
+import java.util.Optional;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class PaymentService {
+
+    private final PaymentRepository paymentRepository;
+    private final RefundRepository refundRepository;
+    private final PaymentGateway gateway;
+
+    public PaymentService(PaymentRepository paymentRepository, RefundRepository refundRepository,
+            PaymentGateway gateway) {
+        this.paymentRepository = paymentRepository;
+        this.refundRepository = refundRepository;
+        this.gateway = gateway;
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Payment capture(Long orderId, BigDecimal amount, String paymentToken) {
+        GatewayResult result = gateway.charge(paymentToken, amount, "order-" + orderId);
+        if (!result.success()) {
+            throw new PaymentDeclinedException(result.failureReason());
+        }
+        Payment payment = new Payment();
+        payment.setOrderId(orderId);
+        payment.setAmount(Money.of(amount));
+        payment.setRefundedAmount(Money.ZERO);
+        payment.setStatus(PaymentStatus.CAPTURED);
+        payment.setGatewayTransactionId(result.transactionId());
+        return paymentRepository.save(payment);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Refund refund(Long orderId, BigDecimal amount, String reason) {
+        if (amount.signum() <= 0) {
+            throw new BadRequestException("Refund amount must be positive");
+        }
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new NotFoundException("No payment for order " + orderId));
+        BigDecimal refundable = payment.getAmount().subtract(payment.getRefundedAmount());
+        if (amount.compareTo(refundable) > 0) {
+            throw new ConflictException("Refund of " + amount + " exceeds refundable amount " + refundable);
+        }
+        GatewayResult result = gateway.refund(payment.getGatewayTransactionId(), amount);
+        if (!result.success()) {
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "Refund failed: " + result.failureReason());
+        }
+        payment.setRefundedAmount(payment.getRefundedAmount().add(amount));
+        payment.setStatus(payment.getRefundedAmount().compareTo(payment.getAmount()) == 0
+                ? PaymentStatus.REFUNDED : PaymentStatus.PARTIALLY_REFUNDED);
+        Refund refund = new Refund();
+        refund.setPayment(payment);
+        refund.setAmount(Money.of(amount));
+        refund.setReason(reason);
+        refund.setGatewayRefundId(result.transactionId());
+        return refundRepository.save(refund);
+    }
+
+    /** No readOnly flag: called from inside write transactions (checkout, cancel). */
+    public Optional<PaymentSummary> findSummary(Long orderId) {
+        return paymentRepository.findByOrderId(orderId).map(PaymentSummary::from);
+    }
+}
