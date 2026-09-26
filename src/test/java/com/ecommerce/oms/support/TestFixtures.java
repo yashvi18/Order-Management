@@ -7,6 +7,9 @@ import com.ecommerce.oms.catalog.Category;
 import com.ecommerce.oms.catalog.CategoryRepository;
 import com.ecommerce.oms.catalog.Product;
 import com.ecommerce.oms.catalog.ProductRepository;
+import com.ecommerce.oms.discount.Discount;
+import com.ecommerce.oms.discount.DiscountRepository;
+import com.ecommerce.oms.discount.DiscountType;
 import com.ecommerce.oms.inventory.InventoryItem;
 import com.ecommerce.oms.inventory.InventoryItemRepository;
 import com.ecommerce.oms.inventory.Warehouse;
@@ -27,6 +30,7 @@ public class TestFixtures {
     @Autowired private ProductRepository productRepository;
     @Autowired private WarehouseRepository warehouseRepository;
     @Autowired private InventoryItemRepository inventoryItemRepository;
+    @Autowired private DiscountRepository discountRepository;
 
     public User customer(String email) {
         return user(email, Role.CUSTOMER, null);
@@ -98,5 +102,14 @@ public class TestFixtures {
 
     public User staff(String email, Warehouse warehouse) {
         return user(email, Role.WAREHOUSE_STAFF, warehouse.getId());
+    }
+
+    public Discount discount(String code, DiscountType type, String value, Integer usageLimit) {
+        Discount discount = new Discount();
+        discount.setCode(code);
+        discount.setType(type);
+        discount.setValue(new BigDecimal(value));
+        discount.setUsageLimit(usageLimit);
+        return discountRepository.save(discount);
     }
 }
