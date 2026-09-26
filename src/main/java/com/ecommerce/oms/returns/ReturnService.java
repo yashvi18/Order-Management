@@ -156,7 +156,13 @@ public class ReturnService {
     }
 
     private ReturnRequest requirePending(Long returnId, AppUserDetails actor) {
-        ReturnRequest returnRequest = returnRepository.findById(returnId)
+        // Lock the return row before reading its status: otherwise two concurrent receives can both pass the
+        // REQUESTED check, and the second (waiting only on the order lock taken later in receive()) would call
+        // the payment gateway a second time before @Version catches the conflict at commit. Locking here makes
+        // the second caller block until the first commits, so it observes RECEIVED/REJECTED and gets 409 before
+        // touching inventory or the gateway. Lock order is return row, then order row (requestReturn only takes
+        // the order row lock), so this cannot deadlock against it.
+        ReturnRequest returnRequest = returnRepository.lockById(returnId)
                 .orElseThrow(() -> new NotFoundException("Return not found"));
         accessPolicy.check(returnRequest.getCustomerOrder().getId(), actor);
         if (returnRequest.getStatus() != ReturnStatus.REQUESTED) {

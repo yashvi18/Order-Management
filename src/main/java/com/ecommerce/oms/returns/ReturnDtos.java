@@ -18,7 +18,7 @@ public final class ReturnDtos {
     public record ReturnLine(@NotNull Long orderItemId, @NotNull @Min(1) Integer quantity) {
     }
 
-    public record CreateReturnRequest(@NotEmpty @Valid List<ReturnLine> items, @NotBlank @Size(max = 500) String reason) {
+    public record CreateReturnRequest(@NotEmpty List<@Valid ReturnLine> items, @NotBlank @Size(max = 500) String reason) {
     }
 
     public record ResolveReturnRequest(@Size(max = 500) String note) {

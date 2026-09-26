@@ -115,6 +115,17 @@ class ReturnsApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void returnQuantityMustBePositive() throws Exception {
+        long orderId = deliveredOrder(1);
+        mvc.perform(post("/api/orders/%d/returns".formatted(orderId)).with(as(alice)).contentType(APPLICATION_JSON)
+                        .content("""
+                                {"reason":"x","items":[{"orderItemId":%d,"quantity":0}]}
+                                """.formatted(orderItemId(orderId))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors").exists());
+    }
+
+    @Test
     void cannotReturnMoreThanReturnableIncludingPendingRequests() throws Exception {
         long orderId = deliveredOrder(3);
         long itemId = orderItemId(orderId);

@@ -1,7 +1,10 @@
 package com.ecommerce.oms.returns;
 
+import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -10,6 +13,10 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, Lo
     List<ReturnRequest> findByCustomerOrderIdOrderByIdAsc(Long orderId);
 
     List<ReturnRequest> findByStatusOrderByIdAsc(ReturnStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from ReturnRequest r where r.id = :id")
+    Optional<ReturnRequest> lockById(@Param("id") Long id);
 
     @Query("select distinct r from ReturnRequest r join r.customerOrder o join o.items i join i.allocations a "
             + "where a.warehouse.id = :warehouseId and r.status = :status order by r.id")
