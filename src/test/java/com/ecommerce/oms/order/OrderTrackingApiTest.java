@@ -14,6 +14,7 @@ import com.ecommerce.oms.events.OutboxProcessor;
 import com.ecommerce.oms.events.OutboxRepository;
 import com.ecommerce.oms.inventory.Warehouse;
 import com.ecommerce.oms.support.IntegrationTestBase;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,8 +86,8 @@ class OrderTrackingApiTest extends IntegrationTestBase {
         long packedId = placeOrder(alice, 1);
         tx.executeWithoutResult(s -> {
             CustomerOrder order = orderRepository.findById(packedId).orElseThrow();
-            order.transitionTo(OrderStatus.CONFIRMED, "test", null);
-            order.transitionTo(OrderStatus.PACKED, "test", null);
+            order.transitionTo(OrderStatus.CONFIRMED, "test", null, Instant.now());
+            order.transitionTo(OrderStatus.PACKED, "test", null, Instant.now());
         });
         mvc.perform(post("/api/orders/%d/cancel".formatted(packedId)).with(as(alice)))
                 .andExpect(status().isConflict())

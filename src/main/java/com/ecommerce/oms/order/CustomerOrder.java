@@ -95,17 +95,17 @@ public class CustomerOrder {
         items.add(item);
     }
 
-    public void markPlaced(String actor) {
+    public void markPlaced(String actor, Instant at) {
         if (status != null) {
             throw new IllegalStateException("Order already placed");
         }
-        record(null, OrderStatus.PLACED, actor, "Order placed");
+        record(null, OrderStatus.PLACED, actor, "Order placed", at);
         placedAt = updatedAt;
     }
 
-    public void transitionTo(OrderStatus target, String actor, String note) {
+    public void transitionTo(OrderStatus target, String actor, String note, Instant at) {
         OrderStateMachine.assertTransition(status, target);
-        record(status, target, actor, note);
+        record(status, target, actor, note, at);
     }
 
     public List<StockAllocation> stockAllocations() {
@@ -120,13 +120,12 @@ public class CustomerOrder {
                 .map(a -> a.getWarehouse().getCode()).distinct().sorted().collect(Collectors.joining(", "));
     }
 
-    private void record(OrderStatus from, OrderStatus to, String actor, String note) {
-        Instant now = Instant.now();
-        history.add(new OrderStatusHistory(this, from, to, actor, note, now));
+    private void record(OrderStatus from, OrderStatus to, String actor, String note, Instant at) {
+        history.add(new OrderStatusHistory(this, from, to, actor, note, at));
         status = to;
-        updatedAt = now;
+        updatedAt = at;
         if (to == OrderStatus.DELIVERED) {
-            deliveredAt = now;
+            deliveredAt = at;
         }
     }
 }

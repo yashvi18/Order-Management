@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.ecommerce.oms.common.ConflictException;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class CustomerOrderTest {
@@ -11,8 +12,8 @@ class CustomerOrderTest {
     @Test
     void transitionsAreRecordedInHistory() {
         CustomerOrder order = new CustomerOrder();
-        order.markPlaced("alice@test.local");
-        order.transitionTo(OrderStatus.CONFIRMED, "system", "routed");
+        order.markPlaced("alice@test.local", Instant.now());
+        order.transitionTo(OrderStatus.CONFIRMED, "system", "routed", Instant.now());
 
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
         assertThat(order.getPlacedAt()).isNotNull();
@@ -27,20 +28,20 @@ class CustomerOrderTest {
     @Test
     void deliveredSetsDeliveredAt() {
         CustomerOrder order = new CustomerOrder();
-        order.markPlaced("a");
-        order.transitionTo(OrderStatus.CONFIRMED, "s", null);
-        order.transitionTo(OrderStatus.PACKED, "s", null);
-        order.transitionTo(OrderStatus.SHIPPED, "s", null);
+        order.markPlaced("a", Instant.now());
+        order.transitionTo(OrderStatus.CONFIRMED, "s", null, Instant.now());
+        order.transitionTo(OrderStatus.PACKED, "s", null, Instant.now());
+        order.transitionTo(OrderStatus.SHIPPED, "s", null, Instant.now());
         assertThat(order.getDeliveredAt()).isNull();
-        order.transitionTo(OrderStatus.DELIVERED, "s", null);
+        order.transitionTo(OrderStatus.DELIVERED, "s", null, Instant.now());
         assertThat(order.getDeliveredAt()).isNotNull();
     }
 
     @Test
     void illegalTransitionLeavesOrderUnchanged() {
         CustomerOrder order = new CustomerOrder();
-        order.markPlaced("a");
-        assertThatThrownBy(() -> order.transitionTo(OrderStatus.SHIPPED, "s", null))
+        order.markPlaced("a", Instant.now());
+        assertThatThrownBy(() -> order.transitionTo(OrderStatus.SHIPPED, "s", null, Instant.now()))
                 .isInstanceOf(ConflictException.class);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PLACED);
         assertThat(order.getHistory()).hasSize(1);

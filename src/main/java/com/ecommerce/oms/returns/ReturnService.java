@@ -124,7 +124,7 @@ public class ReturnService {
         returnRequest.setRefundAmount(refundTotal);
         boolean fullyReturned = order.getItems().stream().allMatch(i -> i.getReturnedQuantity() == i.getQuantity());
         order.transitionTo(fullyReturned ? OrderStatus.RETURNED : OrderStatus.PARTIALLY_RETURNED, actor.email(),
-                "Return #" + returnRequest.getId() + " received");
+                "Return #" + returnRequest.getId() + " received", clock.instant());
         eventPublisher.publish(OrderEventType.REFUND_ISSUED, order.getId(), order.getCustomer().getId(), actor.email(),
                 "Refund of " + refundTotal + " issued for return #" + returnRequest.getId());
         return ReturnResponse.from(returnRequest);

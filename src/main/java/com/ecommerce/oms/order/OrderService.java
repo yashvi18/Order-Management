@@ -11,6 +11,7 @@ import com.ecommerce.oms.inventory.InventoryService;
 import com.ecommerce.oms.order.OrderDtos.OrderResponse;
 import com.ecommerce.oms.order.OrderDtos.OrderSummaryResponse;
 import com.ecommerce.oms.payment.PaymentService;
+import java.time.Clock;
 import java.util.Set;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,14 +27,16 @@ public class OrderService {
     private final InventoryService inventoryService;
     private final PaymentService paymentService;
     private final OrderEventPublisher eventPublisher;
+    private final Clock clock;
 
     public OrderService(OrderRepository orderRepository, OrderMapper orderMapper, InventoryService inventoryService,
-            PaymentService paymentService, OrderEventPublisher eventPublisher) {
+            PaymentService paymentService, OrderEventPublisher eventPublisher, Clock clock) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.inventoryService = inventoryService;
         this.paymentService = paymentService;
         this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +72,7 @@ public class OrderService {
                 .filter(o -> actor.role() == Role.ADMIN || o.getCustomer().getId().equals(actor.id()))
                 .orElseThrow(OrderService::notFound);
         order.transitionTo(OrderStatus.CANCELLED, actor.email(),
-                reason == null || reason.isBlank() ? "Cancelled" : reason);
+                reason == null || reason.isBlank() ? "Cancelled" : reason, clock.instant());
         inventoryService.releaseReservations(order.stockAllocations());
         if (order.getGrandTotal().signum() > 0) {
             paymentService.refund(order.getId(), order.getGrandTotal(), "Order cancelled");

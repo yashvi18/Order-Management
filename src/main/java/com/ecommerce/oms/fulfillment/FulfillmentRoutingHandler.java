@@ -7,6 +7,7 @@ import com.ecommerce.oms.events.OutboxEvent;
 import com.ecommerce.oms.order.CustomerOrder;
 import com.ecommerce.oms.order.OrderRepository;
 import com.ecommerce.oms.order.OrderStatus;
+import java.time.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -23,10 +24,12 @@ public class FulfillmentRoutingHandler implements OrderEventHandler {
 
     private final OrderRepository orderRepository;
     private final OrderEventPublisher eventPublisher;
+    private final Clock clock;
 
-    public FulfillmentRoutingHandler(OrderRepository orderRepository, OrderEventPublisher eventPublisher) {
+    public FulfillmentRoutingHandler(OrderRepository orderRepository, OrderEventPublisher eventPublisher, Clock clock) {
         this.orderRepository = orderRepository;
         this.eventPublisher = eventPublisher;
+        this.clock = clock;
     }
 
     @Override
@@ -43,7 +46,7 @@ public class FulfillmentRoutingHandler implements OrderEventHandler {
             return;
         }
         String warehouses = order.warehouseCodes();
-        order.transitionTo(OrderStatus.CONFIRMED, ACTOR, "Routed to warehouses: " + warehouses);
+        order.transitionTo(OrderStatus.CONFIRMED, ACTOR, "Routed to warehouses: " + warehouses, clock.instant());
         eventPublisher.publish(OrderEventType.ORDER_STATUS_CHANGED, order.getId(), event.getCustomerId(), ACTOR,
                 "Order " + order.getOrderNumber() + " confirmed and routed to " + warehouses);
     }

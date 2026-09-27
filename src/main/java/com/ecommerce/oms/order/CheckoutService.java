@@ -146,7 +146,7 @@ public class CheckoutService {
             }
             order.addItem(item);
         }
-        order.markPlaced(customer.email());
+        order.markPlaced(customer.email(), clock.instant());
         orderRepository.save(order);
 
         paymentService.capture(order.getId(), order.getGrandTotal(), request.paymentToken());

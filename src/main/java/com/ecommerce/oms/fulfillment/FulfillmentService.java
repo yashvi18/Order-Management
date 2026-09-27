@@ -17,6 +17,7 @@ import com.ecommerce.oms.order.OrderMapper;
 import com.ecommerce.oms.order.OrderRepository;
 import com.ecommerce.oms.order.OrderService;
 import com.ecommerce.oms.order.OrderStatus;
+import java.time.Clock;
 import java.util.EnumSet;
 import java.util.Set;
 import org.springframework.data.domain.Pageable;
@@ -34,14 +35,17 @@ public class FulfillmentService {
     private final InventoryService inventoryService;
     private final OrderEventPublisher eventPublisher;
     private final WarehouseAccessPolicy accessPolicy;
+    private final Clock clock;
 
     public FulfillmentService(OrderRepository orderRepository, OrderMapper orderMapper,
-            InventoryService inventoryService, OrderEventPublisher eventPublisher, WarehouseAccessPolicy accessPolicy) {
+            InventoryService inventoryService, OrderEventPublisher eventPublisher, WarehouseAccessPolicy accessPolicy,
+            Clock clock) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.inventoryService = inventoryService;
         this.eventPublisher = eventPublisher;
         this.accessPolicy = accessPolicy;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +70,7 @@ public class FulfillmentService {
         // Locked so two concurrent updates serialise and the loser fails the state check (409) instead of
         // tripping over already-consumed stock.
         CustomerOrder order = orderRepository.lockById(orderId).orElseThrow(() -> new NotFoundException("Order not found"));
-        order.transitionTo(target, actor.email(), note);
+        order.transitionTo(target, actor.email(), note, clock.instant());
         if (target == OrderStatus.SHIPPED) {
             inventoryService.commitShipment(order.stockAllocations());
         }
