@@ -9,7 +9,13 @@ import org.springframework.data.jpa.domain.Specification;
 
 final class ProductSpecifications {
 
+    private static final char ESCAPE_CHAR = '\\';
+
     private ProductSpecifications() {
+    }
+
+    private static String escapeLike(String term) {
+        return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     static Specification<Product> filter(Long categoryId, String q, BigDecimal minPrice, BigDecimal maxPrice,
@@ -23,10 +29,10 @@ final class ProductSpecifications {
                 predicates.add(cb.equal(root.get("category").get("id"), categoryId));
             }
             if (q != null && !q.isBlank()) {
-                String like = "%" + q.trim().toLowerCase(Locale.ROOT) + "%";
+                String like = "%" + escapeLike(q.trim().toLowerCase(Locale.ROOT)) + "%";
                 predicates.add(cb.or(
-                        cb.like(cb.lower(root.<String>get("name")), like),
-                        cb.like(cb.lower(root.<String>get("description")), like)));
+                        cb.like(cb.lower(root.<String>get("name")), like, ESCAPE_CHAR),
+                        cb.like(cb.lower(root.<String>get("description")), like, ESCAPE_CHAR)));
             }
             if (minPrice != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.<BigDecimal>get("price"), minPrice));

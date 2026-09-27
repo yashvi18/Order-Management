@@ -100,6 +100,21 @@ class CatalogApiTest extends IntegrationTestBase {
     }
 
     @Test
+    void searchTreatsWildcardsLiterally() throws Exception {
+        Category clothing = fixtures.category("Clothing", "0.12");
+        fixtures.product(clothing, "TEE-1", "100% Cotton Tee", "20.00");
+        fixtures.product(clothing, "TEE-2", "Plain Tee", "18.00");
+
+        mvc.perform(get("/api/catalog/products").param("q", "%"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].name").value("100% Cotton Tee"));
+        mvc.perform(get("/api/catalog/products").param("q", "_"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
     void badSearchParametersAreRejected() throws Exception {
         mvc.perform(get("/api/catalog/products").param("sort", "bogus")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/catalog/products").param("minPrice", "100").param("maxPrice", "10"))
