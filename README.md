@@ -144,7 +144,7 @@ test (`ReturnsConcurrencyTest`).
   cancelled and refunded or moves on with no refund, never both), and two concurrent "shipped" updates
   (`FulfillmentConcurrencyTest.concurrentShipUpdatesCommitStockOnce`, stock committed once, loser gets 409).
 - **Background:** one Awaitility test runs the real scheduler end to end.
-- 128 tests in the suite as of this build (`./mvnw clean verify`, `BUILD SUCCESS`).
+- 130 tests in the suite as of this build (`./mvnw clean verify`, `BUILD SUCCESS`).
 
 ## AI workflow
 Built with Claude Code and the "superpowers" skills (in `docs/ai/skills/`). The assignment PDF was turned

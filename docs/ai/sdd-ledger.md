@@ -94,3 +94,7 @@ Ruling: final fix wave = C1, I1, I2, M1 (401/403 ProblemDetail), M2 (category pa
 Final fix wave: 4 commits 67a946d..09e07b7 (C1, I1, I2, M1, M2, M4, M5, README); scoped re-review (opus): all findings addressed, no new breakage; 128 tests green.
 Final: minor (deferred): cancel holds the order lock during the gateway refund (slow PSP → lock timeouts for waiting router/staff); lock taken before ownership filter; router-race test only exercises the CANCELLED branch; M3 order timestamps use Instant.now() not Clock; M6 LIKE wildcards not escaped in product search.
 Branch complete: main pushed to origin through the final fix wave.
+
+## Follow-up (2026-09-27)
+Follow-up: M3 (order timestamps from injected Clock) and M6 (LIKE wildcard escaping) fixed test-first; commits e56159d..56881a3.
+Follow-up review: <filled in by controller>
