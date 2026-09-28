@@ -96,5 +96,5 @@ Final: minor (deferred): cancel holds the order lock during the gateway refund (
 Branch complete: main pushed to origin through the final fix wave.
 
 ## Follow-up (2026-09-27)
-Follow-up: M3 (order timestamps from injected Clock) and M6 (LIKE wildcard escaping) fixed test-first; commits e56159d..56881a3.
-Follow-up review: <filled in by controller>
+Follow-up: M3 (order timestamps from injected Clock) and M6 (LIKE wildcard escaping) fixed test-first; commits a851426..21de487 (trailers reworded from e56159d..56881a3 to the project's Co-Authored-By convention, trees identical).
+Follow-up review: spec ✅, no Critical/Important code findings (all callers use the injected Clock, the @Primary test Clock stays in its own context, backslash escape is valid on H2-PostgreSQL mode and real PostgreSQL); stale ledger SHAs fixed here. 130 tests green.
